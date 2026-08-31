@@ -64,6 +64,16 @@
   .card-title .meta{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
   .card-count{font-family:'Quicksand';font-weight:600;font-size:13px;color:var(--ink-soft);flex:none}
   .card-del{border:none;background:none;font-size:18px;padding:4px 6px;cursor:pointer;flex:none}
+  .schede{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:16px}
+  .scheda{background:var(--surface);border:1.5px solid transparent;border-radius:18px;padding:13px 4px 11px;
+    display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
+    box-shadow:var(--shadow-soft);transition:.16s}
+  .scheda:active{transform:scale(.96)}
+  .scheda .ic{font-size:25px;line-height:1}
+  .scheda .ti{font-family:'Quicksand';font-weight:700;font-size:12.5px;color:var(--ink)}
+  .scheda .nm{font-size:10.5px;color:var(--ink-soft)}
+  .scheda.on{border-color:var(--sage);background:var(--sage-bg)}
+  .scheda.on .ti{color:var(--sage)}
   .sez-add{border:none;background:var(--sage);color:#fff;width:34px;height:34px;border-radius:12px;
     font-size:22px;line-height:1;cursor:pointer;flex:none;display:grid;place-items:center}
   .sez-add:active{transform:scale(.92)}
@@ -336,80 +346,78 @@ function renderBebe(){
   const nDiaper=todays.filter(e=>e.type==="diaper").length;
   const nFeed=todays.filter(e=>e.type==="feed").length;
   const nVomit=todays.filter(e=>e.type==="vomit").length;
-  const nPupu=todays.filter(e=>e.type==="diaper"&&(e.kind==="pupu"||e.kind==="both")).length;
-
-  let h='<div class="today">'
-    + '<div class="stat"><b>'+nFeed+'</b><span>poppate oggi</span></div>'
-    + '<div class="stat"><b>'+nDiaper+'</b><span>cambi oggi</span></div>'
-    + '<div class="stat"><b>'+(nVomit?nVomit:nPupu)+'</b><span>'+(nVomit?"vomiti oggi":"di cui pupù")+'</span></div>'
-    + '</div>';
-
   const w=state.weights.slice().sort((a,b)=>b.at-a.at);
-  const sezioni=[
-    { k:"feed",   emoji:"🍼", titolo:"Poppata", righe:ev.filter(e=>e.type==="feed"),
-      sotto:(nFeed? nFeed+" oggi":"nessuna oggi") },
-    { k:"vomit",  emoji:"🤢", titolo:"Vomito",  righe:ev.filter(e=>e.type==="vomit"),
-      sotto:(nVomit? nVomit+" oggi":"nessuno oggi") },
-    { k:"diaper", emoji:"🧷", titolo:"Cambio",  righe:ev.filter(e=>e.type==="diaper"),
-      sotto:(nDiaper? nDiaper+" oggi":"nessuno oggi") },
-    { k:"weight", emoji:"⚖️", titolo:"Peso",    righe:w,
-      sotto:(w.length? fmtKg(w[0].kg)+" kg · "+fmtDate(w[0].at) : "nessuna pesata") }
-  ];
 
-  sezioni.forEach(sez=>{
-    const aperta = state.openBebe[sez.k] === true;     // di norma chiuse
-    h += '<div class="card"><div class="card-head" data-sez="'+sez.k+'">'
-      + '<div class="card-emoji">'+sez.emoji+'</div>'
-      + '<div class="card-title"><h2>'+sez.titolo+'</h2><div class="meta">'+sez.sotto+'</div></div>'
-      + '<button class="sez-add" data-new="'+sez.k+'" aria-label="Aggiungi '+sez.titolo+'">+</button>'
-      + '<div class="chev'+(aperta?" up":"")+'">⌄</div>'
-      + '</div>';
-    if(aperta){
-      if(!sez.righe.length){
-        h += '<div class="empty" style="padding:22px 16px"><span class="e">🌙</span>Ancora niente qui.</div>';
-      } else if(sez.k==="weight"){
-        sez.righe.slice(0,30).forEach((x,i)=>{
-          const prev=sez.righe[i+1];
-          const diff=prev ? (x.kg>=prev.kg?"+":"−")+Math.abs(Math.round((x.kg-prev.kg)*1000))+" g" : "prima pesata";
-          h += '<div class="ev"><div class="dot">⚖️</div>'
-            + '<div class="txt"><b>'+fmtKg(x.kg)+' kg</b><span>'+fmtDate(x.at)+(x.note?" · "+esc(x.note):"")+'</span></div>'
-            + '<div class="time">'+diff+'</div>'
-            + '<button class="del" data-wdel="'+x.id+'">🗑</button></div>';
-        });
-      } else {
-        sez.righe.slice(0,50).forEach(e=>{
-          let tit, sub;
-          if(e.type==="feed"){ tit=(e.mode==="seno"?"🤱 ":e.mode==="biberon"?"🍼 ":"🥄 ")+feedText(e); sub=""; }
-          else if(e.type==="vomit"){ tit="Vomito"+(e.amount?" · "+e.amount:""); sub=""; }
-          else { tit=(KINDS[e.kind]||KINDS.pipi).e+" "+(KINDS[e.kind]||KINDS.pipi).t; sub=""; }
-          if(e.note) sub=esc(e.note);
-          h += '<div class="ev"><div class="dot">'+dayShort(e.at)+'</div>'
-            + '<div class="txt"><b>'+tit+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</div>'
-            + '<div class="time">'+hhmm(e.at)+'</div>'
-            + '<button class="del" data-del="'+e.id+'">🗑</button></div>';
-        });
-      }
+  const SCHEDE=[
+    { k:"feed",   emoji:"🍼", titolo:"Poppata", oggi:nFeed,   righe:ev.filter(e=>e.type==="feed") },
+    { k:"vomit",  emoji:"🤢", titolo:"Vomito",  oggi:nVomit,  righe:ev.filter(e=>e.type==="vomit") },
+    { k:"diaper", emoji:"🧷", titolo:"Cambio",  oggi:nDiaper, righe:ev.filter(e=>e.type==="diaper") },
+    { k:"weight", emoji:"⚖️", titolo:"Peso",    oggi:null,    righe:w }
+  ];
+  const sel = state.bebeTab || null;
+
+  let h='<div class="schede">';
+  SCHEDE.forEach(x=>{
+    h += '<button class="scheda'+(sel===x.k?" on":"")+'" data-tab="'+x.k+'">'
+      + '<span class="ic">'+x.emoji+'</span>'
+      + '<span class="ti">'+x.titolo+'</span>'
+      + '<span class="nm">'+(x.k==="weight" ? (w.length?fmtKg(w[0].kg)+" kg":"—") : (x.oggi?x.oggi+" oggi":"—"))+'</span>'
+      + '</button>';
+  });
+  h += '</div>';
+
+  if(!sel){
+    h += '<div class="empty" style="padding:40px 20px"><span class="e">👶</span>'
+      + 'Tocca una scheda qui sopra<br>per vedere e aggiungere gli eventi.</div>';
+  } else {
+    const x=SCHEDE.find(z=>z.k===sel);
+    h += '<div class="card"><div class="card-head" style="cursor:default">'
+      + '<div class="card-emoji">'+x.emoji+'</div>'
+      + '<div class="card-title"><h2>'+x.titolo+'</h2><div class="meta">'
+      + (x.k==="weight" ? (w.length? w.length+" pesate · ultima "+fmtDate(w[0].at) : "nessuna pesata")
+                        : (x.righe.length? x.righe.length+" in tutto · "+(x.oggi||0)+" oggi" : "ancora niente"))
+      + '</div></div>'
+      + '<button class="sez-add" data-new="'+x.k+'" aria-label="Aggiungi">+</button></div>';
+
+    if(!x.righe.length){
+      h += '<div class="empty" style="padding:26px 16px"><span class="e">🌙</span>Ancora niente qui.<br>Tocca + per aggiungere.</div>';
+    } else if(x.k==="weight"){
+      x.righe.slice(0,40).forEach((it,i)=>{
+        const prev=x.righe[i+1];
+        const diff=prev ? (it.kg>=prev.kg?"+":"−")+Math.abs(Math.round((it.kg-prev.kg)*1000))+" g" : "prima pesata";
+        h += '<div class="ev"><div class="dot">⚖️</div>'
+          + '<div class="txt"><b>'+fmtKg(it.kg)+' kg</b><span>'+fmtDate(it.at)+(it.note?" · "+esc(it.note):"")+'</span></div>'
+          + '<div class="time">'+diff+'</div>'
+          + '<button class="del" data-wdel="'+it.id+'">🗑</button></div>';
+      });
+    } else {
+      x.righe.slice(0,60).forEach(e=>{
+        let tit;
+        if(e.type==="feed")       tit=(e.mode==="seno"?"🤱 ":e.mode==="biberon"?"🍼 ":"🥄 ")+feedText(e);
+        else if(e.type==="vomit") tit="Vomito"+(e.amount?" · "+e.amount:"");
+        else                      tit=(KINDS[e.kind]||KINDS.pipi).e+" "+(KINDS[e.kind]||KINDS.pipi).t;
+        h += '<div class="ev"><div class="dot">'+dayShort(e.at)+'</div>'
+          + '<div class="txt"><b>'+tit+'</b>'+(e.note?'<span>'+esc(e.note)+'</span>':'')+'</div>'
+          + '<div class="time">'+hhmm(e.at)+'</div>'
+          + '<button class="del" data-del="'+e.id+'">🗑</button></div>';
+      });
     }
     h += '</div>';
-  });
+  }
 
   v.innerHTML=h;
 
-  v.querySelectorAll("[data-sez]").forEach(el=> el.onclick=(e)=>{
-    if(e.target.closest("[data-new]")) return;
-    const k=el.dataset.sez;
-    state.openBebe[k] = !state.openBebe[k];
+  v.querySelectorAll("[data-tab]").forEach(b=> b.onclick=()=>{
+    state.bebeTab = (state.bebeTab===b.dataset.tab) ? null : b.dataset.tab;
     save(); render();
   });
   v.querySelectorAll("[data-new]").forEach(b=> b.onclick=(e)=>{
     e.stopPropagation();
-    const k=b.dataset.new;
-    state.openBebe[k]=true; save();
-    if(k==="weight") openWeight(); else openEvent(k);
+    if(b.dataset.new==="weight") openWeight(); else openEvent(b.dataset.new);
   });
   v.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>{ if(confirm("Eliminare questa voce?")) delEvent(b.dataset.del); });
   v.querySelectorAll("[data-wdel]").forEach(b=> b.onclick=()=>{
-    if(confirm("Eliminare questa pesata?")){ state.weights=state.weights.filter(x=>x.id!==b.dataset.wdel); save(); render(); }
+    if(confirm("Eliminare questa pesata?")){ state.weights=state.weights.filter(z=>z.id!==b.dataset.wdel); save(); render(); }
   });
 }
 
