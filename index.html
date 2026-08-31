@@ -76,6 +76,8 @@
   .bigbtn.pupu{background:#c9a227;color:#fff}
   .bigbtn.both{background:var(--coral)}
   .bigbtn.feed{background:var(--sage)}
+  .bigbtn.vomit{background:#b98a5e}
+  .bigbtn.weight{background:#7fa8c9}
   .today{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
   .stat{background:var(--surface);border-radius:18px;padding:13px 10px;text-align:center;box-shadow:var(--shadow-soft)}
   .stat b{display:block;font-family:'Quicksand';font-weight:700;font-size:24px;line-height:1.1}
@@ -225,49 +227,89 @@ function buildMacro(){
 
 /* ============ BEBÈ ============ */
 const KINDS={ pipi:{e:"💧",t:"Pipì"}, pupu:{e:"💩",t:"Pupù"}, both:{e:"💧💩",t:"Pipì e pupù"} };
-function addDiaper(kind){
-  state.events.unshift({id:uid(), type:"diaper", kind:kind, at:Date.now()});
-  save(); render(); toast(KINDS[kind].t+" registrato");
+
+/* ---- Foglio unico per registrare un evento: sempre con data e ora modificabili ---- */
+let draft=null;
+function nowParts(){
+  const d=new Date();
+  return { date: d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"),
+           time: String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0") };
 }
-let feedDraft=null;
-function openFeed(){
-  feedDraft={ mode:"seno", side:"sx", ml:"", min:"" };
-  renderFeedSheet();
+function openEvent(type){
+  const n=nowParts();
+  draft={ type:type, kind:"pipi", mode:"seno", side:"sx", date:n.date, time:n.time };
+  renderSheetEvent();
   document.getElementById("scrim").classList.add("on");
 }
-function closeFeed(){ document.getElementById("scrim").classList.remove("on"); feedDraft=null; }
-function renderFeedSheet(){
-  const f=feedDraft, s=document.getElementById("sheet");
-  s.innerHTML =
-    '<h3>Poppata</h3><div class="hint">Come ha mangiato</div>'
-    + '<div class="lbl">Modo</div><div class="opts" id="fmode">'
+function closeSheet(){ document.getElementById("scrim").classList.remove("on"); draft=null; }
+
+function renderSheetEvent(){
+  const f=draft, s=document.getElementById("sheet");
+  const titolo = f.type==="diaper" ? "Cambio" : f.type==="feed" ? "Poppata" : "Vomito";
+  const hint   = f.type==="diaper" ? "Cosa ha fatto" : f.type==="feed" ? "Come ha mangiato" : "Quando è successo";
+
+  let campi="";
+  if(f.type==="diaper"){
+    campi = '<div class="lbl">Tipo</div><div class="opts" id="dkind">'
+      + '<button data-k="pipi" class="'+(f.kind==="pipi"?"on":"")+'">💧 Pipì</button>'
+      + '<button data-k="pupu" class="'+(f.kind==="pupu"?"on":"")+'">💩 Pupù</button>'
+      + '<button data-k="both" class="'+(f.kind==="both"?"on":"")+'">Entrambi</button></div>';
+  } else if(f.type==="feed"){
+    campi = '<div class="lbl">Modo</div><div class="opts" id="fmode">'
       + '<button data-m="seno" class="'+(f.mode==="seno"?"on":"")+'">🤱 Seno</button>'
       + '<button data-m="biberon" class="'+(f.mode==="biberon"?"on":"")+'">🍼 Biberon</button>'
       + '<button data-m="solido" class="'+(f.mode==="solido"?"on":"")+'">🥄 Solido</button></div>'
-    + (f.mode==="seno"
-        ? '<div class="lbl">Lato</div><div class="opts" id="fside">'
-          + '<button data-s="sx" class="'+(f.side==="sx"?"on":"")+'">Sinistro</button>'
-          + '<button data-s="dx" class="'+(f.side==="dx"?"on":"")+'">Destro</button>'
-          + '<button data-s="due" class="'+(f.side==="due"?"on":"")+'">Entrambi</button></div>'
-          + '<div class="lbl">Durata</div><div class="fld"><input id="fmin" type="number" inputmode="numeric" placeholder="minuti" value="'+(f.min||"")+'"><span class="u">min</span></div>'
-        : f.mode==="biberon"
-        ? '<div class="lbl">Quantità</div><div class="fld"><input id="fml" type="number" inputmode="numeric" placeholder="quanti ml" value="'+(f.ml||"")+'"><span class="u">ml</span></div>'
-        : '<div class="lbl">Cosa</div><div class="fld"><input id="fnote" type="text" placeholder="es. pappa di verdure" value="'+(f.note||"")+'"></div>')
-    + '<button class="go" id="fgo">Registra poppata</button>'
-    + '<button class="cancel" id="fcancel">Annulla</button>';
+      + (f.mode==="seno"
+          ? '<div class="lbl">Lato</div><div class="opts" id="fside">'
+            + '<button data-s="sx" class="'+(f.side==="sx"?"on":"")+'">Sinistro</button>'
+            + '<button data-s="dx" class="'+(f.side==="dx"?"on":"")+'">Destro</button>'
+            + '<button data-s="due" class="'+(f.side==="due"?"on":"")+'">Entrambi</button></div>'
+            + '<div class="lbl">Durata</div><div class="fld"><input id="fmin" type="number" inputmode="numeric" placeholder="minuti"><span class="u">min</span></div>'
+          : f.mode==="biberon"
+          ? '<div class="lbl">Quantità</div><div class="fld"><input id="fml" type="number" inputmode="numeric" placeholder="quanti ml"><span class="u">ml</span></div>'
+          : '<div class="lbl">Cosa</div><div class="fld"><input id="fcosa" type="text" placeholder="es. pappa di verdure"></div>');
+  } else {
+    campi = '<div class="lbl">Quanto</div><div class="opts" id="vamt">'
+      + '<button data-v="poco" class="'+(f.amount==="poco"?"on":"")+'">Poco</button>'
+      + '<button data-v="medio" class="'+(f.amount==="medio"?"on":"")+'">Medio</button>'
+      + '<button data-v="tanto" class="'+(f.amount==="tanto"?"on":"")+'">Tanto</button></div>';
+  }
 
-  s.querySelectorAll("#fmode button").forEach(b=> b.onclick=()=>{ feedDraft.mode=b.dataset.m; renderFeedSheet(); });
-  const sd=s.querySelector("#fside"); if(sd) sd.querySelectorAll("button").forEach(b=> b.onclick=()=>{ feedDraft.side=b.dataset.s; renderFeedSheet(); });
-  s.querySelector("#fgo").onclick=()=>{
-    const min=s.querySelector("#fmin"), ml=s.querySelector("#fml"), note=s.querySelector("#fnote");
-    state.events.unshift({ id:uid(), type:"feed", at:Date.now(), mode:feedDraft.mode,
-      side:feedDraft.mode==="seno"?feedDraft.side:null,
-      min:min?(parseInt(min.value,10)||null):null,
-      ml:ml?(parseInt(ml.value,10)||null):null,
-      note:note?note.value.trim():"" });
-    save(); closeFeed(); render(); toast("Poppata registrata");
+  s.innerHTML = '<h3>'+titolo+'</h3><div class="hint">'+hint+'</div>'
+    + campi
+    + '<div class="lbl">Giorno e ora</div>'
+    + '<div class="opts"><div class="fld" style="flex:1.4"><input id="edate" type="date" value="'+f.date+'"></div>'
+    + '<div class="fld" style="flex:1"><input id="etime" type="time" value="'+f.time+'"></div></div>'
+    + '<div class="lbl">Nota</div><div class="fld"><input id="enote" type="text" placeholder="facoltativa"></div>'
+    + '<button class="go" id="ego">Registra</button>'
+    + '<button class="cancel" id="ecancel">Annulla</button>';
+
+  const keep=()=>{ const d=s.querySelector("#edate"), t=s.querySelector("#etime"); if(d) draft.date=d.value; if(t) draft.time=t.value; };
+  const kd=s.querySelector("#dkind");  if(kd) kd.querySelectorAll("button").forEach(b=> b.onclick=()=>{ keep(); draft.kind=b.dataset.k; renderSheetEvent(); });
+  const fm=s.querySelector("#fmode");  if(fm) fm.querySelectorAll("button").forEach(b=> b.onclick=()=>{ keep(); draft.mode=b.dataset.m; renderSheetEvent(); });
+  const fs=s.querySelector("#fside");  if(fs) fs.querySelectorAll("button").forEach(b=> b.onclick=()=>{ keep(); draft.side=b.dataset.s; renderSheetEvent(); });
+  const va=s.querySelector("#vamt");   if(va) va.querySelectorAll("button").forEach(b=> b.onclick=()=>{ keep(); draft.amount=b.dataset.v; renderSheetEvent(); });
+
+  s.querySelector("#ego").onclick=()=>{
+    keep();
+    const at = draft.date ? new Date(draft.date+"T"+(draft.time||"12:00")).getTime() : Date.now();
+    const note=(s.querySelector("#enote")||{}).value||"";
+    const ev={ id:uid(), type:draft.type, at:at, note:note.trim() };
+    if(draft.type==="diaper"){ ev.kind=draft.kind; }
+    else if(draft.type==="feed"){
+      const min=s.querySelector("#fmin"), ml=s.querySelector("#fml"), cosa=s.querySelector("#fcosa");
+      ev.mode=draft.mode;
+      ev.side=draft.mode==="seno"?draft.side:null;
+      ev.min=min?(parseInt(min.value,10)||null):null;
+      ev.ml=ml?(parseInt(ml.value,10)||null):null;
+      if(cosa && cosa.value.trim()) ev.note=cosa.value.trim();
+    } else { ev.amount=draft.amount||null; }
+    state.events.unshift(ev);
+    state.events.sort((a,b)=>b.at-a.at);
+    save(); closeSheet(); render();
+    toast(draft && draft.type==="diaper" ? "Cambio registrato" : draft && draft.type==="feed" ? "Poppata registrata" : "Registrato");
   };
-  s.querySelector("#fcancel").onclick=closeFeed;
+  s.querySelector("#ecancel").onclick=closeSheet;
 }
 function feedText(e){
   if(e.mode==="seno")    return "Seno"+(e.side==="due"?" · entrambi":e.side==="dx"?" · destro":" · sinistro")+(e.min?" · "+e.min+" min":"");
@@ -288,16 +330,17 @@ function renderBebe(){
   const lastDiaper=ev.find(e=>e.type==="diaper");
 
   let h='<div class="bigbtns">'
-    + '<button class="bigbtn pipi" data-d="pipi"><span class="ico">💧</span>Pipì</button>'
-    + '<button class="bigbtn pupu" data-d="pupu"><span class="ico">💩</span>Pupù</button>'
-    + '<button class="bigbtn both" data-d="both"><span class="ico">💧💩</span>Tutti e due</button>'
-    + '<button class="bigbtn feed" id="bfeed"><span class="ico">🍼</span>Poppata</button>'
+    + '<button class="bigbtn feed" data-ev="feed"><span class="ico">🍼</span>Poppata</button>'
+    + '<button class="bigbtn pipi" data-ev="diaper"><span class="ico">🧷</span>Cambio</button>'
+    + '<button class="bigbtn vomit" data-ev="vomit"><span class="ico">🤢</span>Vomito</button>'
+    + '<button class="bigbtn weight" data-ev="weight"><span class="ico">⚖️</span>Peso</button>'
     + '</div>';
 
+  const nVomit=todays.filter(e=>e.type==="vomit").length;
   h += '<div class="today">'
     + '<div class="stat"><b>'+nFeed+'</b><span>poppate oggi</span></div>'
     + '<div class="stat"><b>'+nDiaper+'</b><span>cambi oggi</span></div>'
-    + '<div class="stat"><b>'+nPupu+'</b><span>di cui pupù</span></div>'
+    + '<div class="stat"><b>'+(nVomit?nVomit:nPupu)+'</b><span>'+(nVomit?"vomiti oggi":"di cui pupù")+'</span></div>'
     + '</div>';
 
   if(lastFeed||lastDiaper){
@@ -318,11 +361,15 @@ function renderBebe(){
     Object.keys(days).sort().reverse().slice(0,7).forEach(k=>{
       const list=days[k];
       const f=list.filter(e=>e.type==="feed").length, d=list.filter(e=>e.type==="diaper").length;
-      h += '<div class="daylabel">'+dayLabel(k)+' · '+f+' poppate · '+d+' cambi</div><div class="card">';
+      const vv=list.filter(e=>e.type==="vomit").length;
+      h += '<div class="daylabel">'+dayLabel(k)+' · '+f+' poppate · '+d+' cambi'+(vv?' · '+vv+' vomiti':'')+'</div><div class="card">';
       list.forEach(e=>{
-        const emo = e.type==="feed" ? (e.mode==="seno"?"🤱":e.mode==="biberon"?"🍼":"🥄") : KINDS[e.kind].e;
-        const tit = e.type==="feed" ? "Poppata" : KINDS[e.kind].t;
-        const sub = e.type==="feed" ? feedText(e) : "Cambio pannolino";
+        const emo = e.type==="feed" ? (e.mode==="seno"?"🤱":e.mode==="biberon"?"🍼":"🥄")
+                  : e.type==="vomit" ? "🤢" : (KINDS[e.kind]||KINDS.pipi).e;
+        const tit = e.type==="feed" ? "Poppata" : e.type==="vomit" ? "Vomito" : (KINDS[e.kind]||KINDS.pipi).t;
+        let sub  = e.type==="feed" ? feedText(e)
+                 : e.type==="vomit" ? ("Rigurgito"+(e.amount?" · "+e.amount:"")) : "Cambio pannolino";
+        if(e.note && e.type!=="feed") sub += " · "+esc(e.note);
         h += '<div class="ev"><div class="dot">'+emo+'</div>'
            + '<div class="txt"><b>'+tit+'</b><span>'+sub+'</span></div>'
            + '<div class="time">'+hhmm(e.at)+'</div>'
@@ -333,8 +380,9 @@ function renderBebe(){
   }
   v.innerHTML=h;
 
-  v.querySelectorAll("[data-d]").forEach(b=> b.onclick=()=>addDiaper(b.dataset.d));
-  v.querySelector("#bfeed").onclick=openFeed;
+  v.querySelectorAll("[data-ev]").forEach(b=> b.onclick=()=>{
+    if(b.dataset.ev==="weight") openWeight(); else openEvent(b.dataset.ev);
+  });
   v.querySelectorAll("[data-del]").forEach(b=> b.onclick=()=>{ if(confirm("Eliminare questa voce?")) delEvent(b.dataset.del); });
   v.querySelector("#waddbtn").onclick=openWeight;
   v.querySelectorAll("[data-wdel]").forEach(b=> b.onclick=()=>{
@@ -506,7 +554,7 @@ function render(){
     activeMacro==="bebe" ? (t.length? "Oggi: "+t.filter(e=>e.type==="feed").length+" poppate · "+t.filter(e=>e.type==="diaper").length+" cambi" : "Il diario del bebè")
     : activeMacro==="fare" ? "Compiti di Fede e Sara" : "Cosa serve al nido";
 }
-document.getElementById("scrim").onclick=(e)=>{ if(e.target.id==="scrim") closeFeed(); };
+document.getElementById("scrim").onclick=(e)=>{ if(e.target.id==="scrim") closeSheet(); };
 
 /* ============ Sync (documento separato da Cicogna) ============ */
 const FB_CONFIG={
