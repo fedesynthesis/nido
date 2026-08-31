@@ -66,7 +66,7 @@
   .card-del{border:none;background:none;font-size:18px;padding:4px 6px;cursor:pointer;flex:none}
   /* linguette da schedario: si sovrappongono leggermente, come le cartelline */
   .schede{display:flex;align-items:flex-end;margin:16px 0 0;padding-left:2px}
-  .scheda{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--line);border-bottom:none;
+  .scheda{flex:1;min-width:0;background:var(--catbg,var(--bg2));border:1px solid rgba(38,52,42,.07);border-bottom:none;
     border-radius:13px 13px 0 0;padding:8px 4px 9px 12px;margin-left:-11px;
     display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;
     box-shadow:2px -2px 6px rgba(38,52,42,.06);transition:.16s;position:relative}
@@ -77,10 +77,16 @@
   .scheda .ti{font-family:'Quicksand';font-weight:700;font-size:11px;color:var(--ink-soft);line-height:1.2;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .scheda .nm{font-size:9px;color:var(--ink-soft);opacity:.75;line-height:1.2;white-space:nowrap}
-  .scheda.on{background:#fff;border-color:var(--sage-soft);z-index:20;
+  .scheda .ti{color:var(--cat,var(--ink-soft))}
+  .scheda.on{background:#fff;border-color:var(--cat,var(--sage-soft));z-index:20;
     padding-top:12px;margin-bottom:-1px;box-shadow:0 -3px 9px rgba(38,52,42,.07)}
-  .scheda.on .ti{color:var(--sage)}
-  .scheda.on .nm{opacity:1}
+  .scheda.on .ti{color:var(--cat,var(--sage))}
+  .scheda.on .nm{opacity:1;color:var(--cat,var(--ink-soft))}
+  /* il foglio prende un accento della categoria (niente bordo in alto:
+     taglierebbe la linguetta aperta) */
+  .card.cat .card-emoji{background:var(--catbg)}
+  .card.cat .ev .dot{background:var(--catbg)}
+  .card.cat .sez-add{background:var(--cat)}
   /* il foglio sotto le linguette */
   .schede + .card{margin-top:0;border-top-left-radius:4px}
   .sez-add{border:none;background:var(--sage);color:#fff;width:34px;height:34px;border-radius:12px;
@@ -358,16 +364,20 @@ function renderBebe(){
   const w=state.weights.slice().sort((a,b)=>b.at-a.at);
 
   const SCHEDE=[
-    { k:"feed",   emoji:"🍼", titolo:"Poppata", oggi:nFeed,   righe:ev.filter(e=>e.type==="feed") },
-    { k:"vomit",  emoji:"🤢", titolo:"Vomito",  oggi:nVomit,  righe:ev.filter(e=>e.type==="vomit") },
-    { k:"diaper", emoji:"🧷", titolo:"Cambio",  oggi:nDiaper, righe:ev.filter(e=>e.type==="diaper") },
-    { k:"weight", emoji:"⚖️", titolo:"Peso",    oggi:null,    righe:w }
+    { k:"feed",   emoji:"🍼", titolo:"Poppata", oggi:nFeed,   righe:ev.filter(e=>e.type==="feed"),
+      bg:"#e4f2e8", fg:"#3f8a58" },
+    { k:"vomit",  emoji:"🤢", titolo:"Vomito",  oggi:nVomit,  righe:ev.filter(e=>e.type==="vomit"),
+      bg:"#f7e9dd", fg:"#a2703f" },
+    { k:"diaper", emoji:"🧷", titolo:"Cambio",  oggi:nDiaper, righe:ev.filter(e=>e.type==="diaper"),
+      bg:"#fbf1d8", fg:"#9a7b16" },
+    { k:"weight", emoji:"⚖️", titolo:"Peso",    oggi:null,    righe:w,
+      bg:"#e3edf6", fg:"#4f7ea3" }
   ];
   const sel = state.bebeTab || null;
 
   let h='<div class="schede">';
   SCHEDE.forEach(x=>{
-    h += '<button class="scheda'+(sel===x.k?" on":"")+'" data-tab="'+x.k+'">'
+    h += '<button class="scheda'+(sel===x.k?" on":"")+'" data-tab="'+x.k+'" style="--catbg:'+x.bg+';--cat:'+x.fg+'">'
       + '<span class="ic">'+x.emoji+'</span>'
       + '<span class="ti">'+x.titolo+'</span>'
       + '<span class="nm">'+(x.k==="weight" ? (w.length?fmtKg(w[0].kg)+" kg":"—") : (x.oggi?x.oggi+" oggi":"—"))+'</span>'
@@ -380,7 +390,7 @@ function renderBebe(){
       + 'Tocca una scheda qui sopra<br>per vedere e aggiungere gli eventi.</div>';
   } else {
     const x=SCHEDE.find(z=>z.k===sel);
-    h += '<div class="card"><div class="card-head" style="cursor:default">'
+    h += '<div class="card cat" style="--catbg:'+x.bg+';--cat:'+x.fg+'"><div class="card-head" style="cursor:default">'
       + '<div class="card-emoji">'+x.emoji+'</div>'
       + '<div class="card-title"><h2>'+x.titolo+'</h2><div class="meta">'
       + (x.k==="weight" ? (w.length? w.length+" pesate · ultima "+fmtDate(w[0].at) : "nessuna pesata")
